@@ -1,0 +1,22 @@
+{
+  "name": "Nova",
+  "short_name": "Nova",
+  "description": "Assistante IA personnelle",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07090F",
+  "theme_color": "#63B3ED",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192/63B3ED/07090F?text=N",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512/63B3ED/07090F?text=N",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
