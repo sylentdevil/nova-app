@@ -99,7 +99,7 @@ export default function App() {
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"qwen3:8b",
-          messages:[{role:"system",content:NOVA_SYSTEM},...updated],
+          messages:updated,
           stream:false
         })
       });
