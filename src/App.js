@@ -98,7 +98,7 @@ export default function App() {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"llama3.2:3b",
+          model:"qwen3:8b",
           messages:[{role:"system",content:NOVA_SYSTEM},...updated],
           stream:false
         })
