@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 
 const NOVA_SYSTEM = `Tu es Nova, une assistante IA personnelle intégrée dans la maison connectée d'Avi et Cynthia. Tu es intelligente, chaleureuse et professionnelle. Tu parles toujours en français. Tu es précise et concise. Tu peux contrôler la maison, répondre à des questions générales, donner des infos sur la présence des occupants et les appareils connectés. Ton prénom est Nova, tu n'es pas Claude ni Gemini ni GPT.`;
 
+const TUNNEL = "https://mix-clients-boss-hebrew.trycloudflare.com";
+
 const C = {
   bg:'#07090F',surface:'#0C1018',card:'#111827',
   border:'rgba(99,179,237,0.1)',borderActive:'rgba(99,179,237,0.28)',
@@ -92,16 +94,20 @@ export default function App() {
     } : c));
     setLoading(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch(`${TUNNEL}/v1/chat/completions`, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({model:"claude-sonnet-4-20250514", max_tokens:1000, system:NOVA_SYSTEM, messages:updated})
+        body: JSON.stringify({
+          model:"llama3.2:3b",
+          messages:[{role:"system",content:NOVA_SYSTEM},...updated],
+          stream:false
+        })
       });
       const data = await res.json();
-      const reply = data.content?.[0]?.text || "Désolée, une erreur s'est produite.";
+      const reply = data.choices?.[0]?.message?.content || "Désolée, une erreur s'est produite.";
       setConversations(p => p.map(c => c.id === activeId ? {...c, messages:[...updated,{role:"assistant",content:reply}]} : c));
     } catch {
-      setConversations(p => p.map(c => c.id === activeId ? {...c, messages:[...updated,{role:"assistant",content:"Erreur de connexion."}]} : c));
+      setConversations(p => p.map(c => c.id === activeId ? {...c, messages:[...updated,{role:"assistant",content:"Erreur de connexion. Vérifiez le tunnel."}]} : c));
     }
     setLoading(false);
   };
@@ -117,15 +123,11 @@ export default function App() {
 
   return (
     <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text,position:'relative',overflow:'hidden'}}>
-
       {sidebar && <div onClick={()=>setSidebar(false)} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.6)',zIndex:99,backdropFilter:'blur(3px)'}}/>}
-
-      {/* Sidebar */}
       <div style={{width:264,background:C.surface,borderRight:`1px solid ${C.border}`,display:'flex',flexDirection:'column',position:'absolute',left:sidebar?0:-264,top:0,bottom:0,zIndex:100,transition:'left 0.3s cubic-bezier(.4,0,.2,1)'}}>
         <div style={{padding:'20px 16px 14px',borderBottom:`1px solid ${C.border}`}}>
           <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:14}}>
-            <NovaLogo size={24}/>
-            <span style={{fontFamily:"'Syne',sans-serif",fontSize:18,fontWeight:700}}>Nova</span>
+            <NovaLogo size={24}/><span style={{fontFamily:"'Syne',sans-serif",fontSize:18,fontWeight:700}}>Nova</span>
           </div>
           <button onClick={newConv} style={{width:'100%',padding:'9px 12px',background:'rgba(99,179,237,0.08)',border:`1px solid ${C.border}`,borderRadius:10,color:C.cyan,fontSize:13,display:'flex',alignItems:'center',gap:7}}>
             <span style={{fontSize:17}}>+</span> Nouvelle conversation
@@ -143,18 +145,13 @@ export default function App() {
           <div style={{fontSize:11,color:C.muted,textAlign:'center'}}>Nova · Maison connectée</div>
         </div>
       </div>
-
-      {/* Main */}
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-        {/* Header */}
         <div style={{padding:'13px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:10,background:'rgba(7,9,15,0.9)',backdropFilter:'blur(24px)'}}>
           <button onClick={()=>setSidebar(!sidebar)} style={{width:34,height:34,background:'rgba(99,179,237,0.07)',border:`1px solid ${C.border}`,borderRadius:8,color:C.cyan,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>☰</button>
           <NovaLogo size={26}/>
           <span style={{fontFamily:"'Syne',sans-serif",fontSize:18,fontWeight:700,flex:1}}>Nova</span>
           <span style={{fontSize:10,padding:'3px 9px',fontWeight:600,background:'rgba(99,179,237,0.1)',border:'1px solid rgba(99,179,237,0.2)',borderRadius:20,color:C.cyan,letterSpacing:'0.04em'}}>IA LOCALE</span>
         </div>
-
-        {/* Messages */}
         <div style={{flex:1,overflowY:'auto',padding:'28px 18px 12px',display:'flex',flexDirection:'column',gap:18}}>
           {msgs.length===0 ? (
             <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:'40px 20px'}}>
@@ -162,9 +159,7 @@ export default function App() {
               <div style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,background:`linear-gradient(135deg,${C.cyan},${C.purple})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',textAlign:'center'}}>Bonjour, je suis Nova</div>
               <div style={{fontSize:14,color:C.muted,textAlign:'center',lineHeight:1.6}}>Votre assistante IA personnelle.<br/>Comment puis-je vous aider ?</div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginTop:12,maxWidth:340}}>
-                {SUGGESTIONS.map(s=>(
-                  <button key={s} className="sugg" onClick={()=>send(s)} style={{padding:'7px 13px',background:'rgba(99,179,237,0.06)',border:'1px solid rgba(99,179,237,0.15)',borderRadius:20,color:C.muted,fontSize:12,transition:'all .15s',fontWeight:500}}>{s}</button>
-                ))}
+                {SUGGESTIONS.map(s=>(<button key={s} className="sugg" onClick={()=>send(s)} style={{padding:'7px 13px',background:'rgba(99,179,237,0.06)',border:'1px solid rgba(99,179,237,0.15)',borderRadius:20,color:C.muted,fontSize:12,transition:'all .15s',fontWeight:500}}>{s}</button>))}
               </div>
             </div>
           ) : msgs.map((m,i)=>(
@@ -191,8 +186,6 @@ export default function App() {
           )}
           <div ref={endRef}/>
         </div>
-
-        {/* Input */}
         <div style={{padding:'12px 18px 28px',borderTop:`1px solid ${C.border}`,background:'rgba(7,9,15,0.92)',backdropFilter:'blur(24px)'}}>
           <div style={{display:'flex',alignItems:'flex-end',gap:10,background:C.card,border:`1px solid ${focused?C.borderActive:C.border}`,borderRadius:16,padding:'10px 12px',transition:'border-color .2s'}}>
             <textarea ref={taRef} value={input} onChange={onInput} onKeyDown={onKey} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} placeholder="Message à Nova…" rows={1} style={{flex:1,background:'transparent',border:'none',color:C.text,fontSize:14,lineHeight:1.55,maxHeight:130,padding:'2px 0'}}/>
