@@ -41,6 +41,7 @@ export default function App() {
   const [focused, setFocused] = useState(false);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef(null);
+  const sendBtnRef = useRef(null);
   const endRef = useRef(null);
   const taRef = useRef(null);
 
@@ -142,8 +143,7 @@ export default function App() {
         }
       }
       if (transcript.trim()) {
-        setInput(transcript.trim());
-        sendMessage(transcript.trim());
+        sendMsgRef.current(transcript.trim());
       }
     };
     r.onerror = () => setListening(false);
@@ -153,6 +153,8 @@ export default function App() {
   };
 
   const canSend = input.trim().length > 0 && !loading;
+  const sendMsgRef = useRef(null);
+  sendMsgRef.current = sendMessage;
 
   return (
     <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text,position:'relative',overflow:'hidden'}}>
