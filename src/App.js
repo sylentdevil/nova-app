@@ -136,7 +136,6 @@ export default function App() {
     r.onstart = () => setListening(true);
     r.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
-      setInput(transcript);
       sendMessage(transcript);
     };
     r.onerror = () => setListening(false);
