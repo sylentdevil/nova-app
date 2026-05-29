@@ -39,9 +39,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [focused, setFocused] = useState(false);
-  const [listening, setListening] = useState(false);
-  const recognitionRef = useRef(null);
-  const sendBtnRef = useRef(null);
   const endRef = useRef(null);
   const taRef = useRef(null);
 
@@ -126,35 +123,7 @@ export default function App() {
     e.target.style.height=Math.min(e.target.scrollHeight,130)+'px';
   };
 
-  const startVoice = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { alert("Voix non supportée sur ce navigateur"); return; }
-    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
-    const r = new SpeechRecognition();
-    r.lang = "fr-FR";
-    r.continuous = false;
-    r.interimResults = false;
-    r.onstart = () => setListening(true);
-    r.onresult = (e) => {
-      let transcript = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          transcript += e.results[i][0].transcript;
-        }
-      }
-      if (transcript.trim()) {
-        sendMsgRef.current(transcript.trim());
-      }
-    };
-    r.onerror = () => setListening(false);
-    r.onend = () => setListening(false);
-    recognitionRef.current = r;
-    r.start();
-  };
-
   const canSend = input.trim().length > 0 && !loading;
-  const sendMsgRef = useRef(null);
-  sendMsgRef.current = sendMessage;
 
   return (
     <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text,position:'relative',overflow:'hidden'}}>
@@ -224,7 +193,6 @@ export default function App() {
         <div style={{padding:'12px 18px 28px',borderTop:`1px solid ${C.border}`,background:'rgba(7,9,15,0.92)',backdropFilter:'blur(24px)'}}>
           <div style={{display:'flex',alignItems:'flex-end',gap:10,background:C.card,border:`1px solid ${focused?C.borderActive:C.border}`,borderRadius:16,padding:'10px 12px',transition:'border-color .2s'}}>
             <textarea ref={taRef} value={input} onChange={onInput} onKeyDown={onKey} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} placeholder="Message à Nova…" rows={1} style={{flex:1,background:'transparent',border:'none',color:C.text,fontSize:14,lineHeight:1.55,maxHeight:130,padding:'2px 0'}}/>
-            <button onClick={startVoice} style={{background:'none',border:'none',cursor:'pointer',padding:'0 6px',fontSize:20,color:listening?'#ff4444':C.text,animation:listening?'pulse 1s infinite':'none'}}>{listening ? '🔴' : '🎤'}</button>
             <button onClick={()=>send()} disabled={!canSend} style={{width:36,height:36,borderRadius:10,border:'none',flexShrink:0,background:canSend?`linear-gradient(135deg,${C.cyan},${C.purple})`:'rgba(99,179,237,0.08)',display:'flex',alignItems:'center',justifyContent:'center',opacity:canSend?1:0.45}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M22 2L11 13" stroke={canSend?'#07090F':C.cyan} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
