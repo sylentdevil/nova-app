@@ -135,8 +135,16 @@ export default function App() {
     r.interimResults = false;
     r.onstart = () => setListening(true);
     r.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      sendMessage(transcript);
+      let transcript = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          transcript += e.results[i][0].transcript;
+        }
+      }
+      if (transcript.trim()) {
+        setInput(transcript.trim());
+        sendMessage(transcript.trim());
+      }
     };
     r.onerror = () => setListening(false);
     r.onend = () => setListening(false);
