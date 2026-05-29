@@ -94,8 +94,11 @@ export default function App() {
     } : c));
     setLoading(true);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
       const res = await fetch(`${TUNNEL}/v1/chat/completions`, {
         method:"POST",
+        signal: controller.signal,
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"qwen3:8b",
@@ -104,6 +107,7 @@ export default function App() {
         })
       });
       const data = await res.json();
+      clearTimeout(timeoutId);
       const reply = data.choices?.[0]?.message?.content || "Désolée, une erreur s'est produite.";
       setConversations(p => p.map(c => c.id === activeId ? {...c, messages:[...updated,{role:"assistant",content:reply}]} : c));
     } catch {
