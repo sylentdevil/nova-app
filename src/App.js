@@ -78,7 +78,9 @@ export default function App() {
       return saved ? JSON.parse(saved) : [{id:1,title:"Nouvelle conversation",messages:[]}];
     } catch { return [{id:1,title:"Nouvelle conversation",messages:[]}]; }
   });
-  const [activeId, setActiveId] = useState(1);
+  const [activeId, setActiveId] = useState(() => {
+    try { return parseInt(localStorage.getItem('nova_activeId')) || 1; } catch { return 1; }
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sidebar, setSidebar] = useState(false);
@@ -130,8 +132,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('nova_conversations', JSON.stringify(conversations)); } catch {}
-  }, [conversations]);
+    try {
+      localStorage.setItem('nova_conversations', JSON.stringify(conversations));
+      localStorage.setItem('nova_activeId', activeId);
+      // Mettre à jour nextId
+      const maxId = Math.max(...conversations.map(c => c.id), 1);
+      nextId = maxId + 1;
+    } catch {}
+  }, [conversations, activeId]);
 
   const active = conversations.find(c => c.id === activeId);
   const msgs = active?.messages || [];
