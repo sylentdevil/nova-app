@@ -119,23 +119,38 @@ export default function App() {
   const speakRef = useRef(true); // TTS activé par défaut
   const [tts, setTts] = useState(true);
 
-  const speak = (text) => {
+  const ELEVEN_KEY = "77f13cc7ef51cb08db0c34fa37ef352dfd26f25c9cc4067faa9175420203aeb7";
+  const ELEVEN_VOICE = "m5U7XCsc8v988k2RJAqN";
+
+  const speak = async (text) => {
     if (!speakRef.current) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "fr-FR";
-    u.rate = 1.05;
-    u.pitch = 1.1;
-    // Choisir une voix française si disponible
-    const voices = window.speechSynthesis.getVoices();
-    const frVoice = voices.find(v => v.lang.startsWith("fr") && v.name.toLowerCase().includes("female"))
-      || voices.find(v => v.lang.startsWith("fr"));
-    if (frVoice) u.voice = frVoice;
-    u.onend = () => {
-      // Redémarre l'écoute après que Nova a fini de parler
-      if (liveRef.current) setTimeout(() => startListening(), 300);
-    };
-    window.speechSynthesis.speak(u);
+    try {
+      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE}`, {
+        method: "POST",
+        headers: {
+          "xi-api-key": ELEVEN_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          text: text.slice(0, 500),
+          model_id: "eleven_multilingual_v2",
+          voice_settings: { stability: 0.5, similarity_boost: 1.0 }
+        })
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        if (liveRef.current) setTimeout(() => startListening(), 300);
+      };
+      audio.play();
+    } catch(e) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "fr-FR";
+      u.onend = () => { if (liveRef.current) setTimeout(() => startListening(), 300); };
+      window.speechSynthesis.speak(u);
+    }
   };
 
   const startListening = () => {
