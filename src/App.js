@@ -1,17 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-
-const NOVA_SYSTEM = `Tu es Nova, une assistante IA personnelle intégrée dans la maison connectée d'Avi et Cynthia. Tu es intelligente, chaleureuse et professionnelle. Tu parles toujours en français. Tu es précise et concise. Tu peux contrôler la maison, répondre à des questions générales, donner des infos sur la présence des occupants et les appareils connectés. Ton prénom est Nova, tu n'es pas Claude ni Gemini ni GPT.`;
-
 const TUNNEL = "https://solved-take-msgid-empire.trycloudflare.com";
-
 const C = {
   bg:'#07090F',surface:'#0C1018',card:'#111827',
   border:'rgba(99,179,237,0.1)',borderActive:'rgba(99,179,237,0.28)',
   cyan:'#63B3ED',text:'#E2E8F0',muted:'#4B5563',purple:'#A78BFA',
 };
-
 const SUGGESTIONS = ["Où est Cynthia ?","Allume la cuisine","Mets de la musique","État de l'alarme","Éteins les lumières","Quel temps fait-il ?"];
-
 const NovaLogo = ({ size=28 }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
     <defs>
@@ -29,9 +23,7 @@ const NovaLogo = ({ size=28 }) => (
     <circle cx="16" cy="16" r="2.8" fill="#07090F"/>
   </svg>
 );
-
 let nextId = 2;
-
 export default function App() {
   const [conversations, setConversations] = useState([{id:1,title:"Nouvelle conversation",messages:[]}]);
   const [activeId, setActiveId] = useState(1);
@@ -39,9 +31,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [listening, setListening] = useState(false);
   const endRef = useRef(null);
   const taRef = useRef(null);
-
+  const recRef = useRef(null);
+  const activeIdRef = useRef(activeId);
+  const loadingRef = useRef(loading);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -55,10 +52,12 @@ export default function App() {
       ::-webkit-scrollbar-thumb{background:rgba(99,179,237,0.18);border-radius:2px;}
       @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
       @keyframes dot{0%,60%,100%{opacity:.25;transform:scale(.75)}30%{opacity:1;transform:scale(1)}}
+      @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
       .msg{animation:fadeUp .22s ease forwards;}
       .d1{animation:dot 1.3s infinite}
       .d2{animation:dot 1.3s .18s infinite}
       .d3{animation:dot 1.3s .36s infinite}
+      .mic-pulse{animation:pulse 1s infinite}
       textarea{font-family:'Plus Jakarta Sans',sans-serif;resize:none;}
       textarea:focus{outline:none;}
       textarea::placeholder{color:#4B5563;}
@@ -68,31 +67,28 @@ export default function App() {
     `;
     document.head.appendChild(style);
   }, []);
-
   const active = conversations.find(c => c.id === activeId);
   const msgs = active?.messages || [];
-
   useEffect(() => { endRef.current?.scrollIntoView({behavior:'smooth'}); }, [msgs, loading]);
-
   const newConv = () => {
     const id = nextId++;
     setConversations(p => [...p, {id, title:"Nouvelle conversation", messages:[]}]);
     setActiveId(id);
     setSidebar(false);
   };
-
-  const send = async (text) => {
-    const msg = (text || input).trim();
-    if (!msg || loading) return;
+  const sendMsg = async (text) => {
+    const msg = text.trim();
+    if (!msg) return;
     setInput("");
     if (taRef.current) taRef.current.style.height = 'auto';
-    const updated = [...msgs, {role:"user", content:msg}];
-    setConversations(p => p.map(c => c.id === activeId ? {
+    setConversations(p => p.map(c => c.id === activeIdRef.current ? {
       ...c,
       title: c.messages.length === 0 ? msg.slice(0,38)+(msg.length>38?'…':'') : c.title,
-      messages: updated
+      messages: [...c.messages, {role:"user", content:msg}]
     } : c));
     setLoading(true);
+    const currentMsgs = conversations.find(c => c.id === activeIdRef.current)?.messages || [];
+    const updated = [...currentMsgs, {role:"user", content:msg}];
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -100,31 +96,50 @@ export default function App() {
         method:"POST",
         signal: controller.signal,
         headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          model:"qwen3:8b",
-          messages:updated,
-          stream:false
-        })
+        body: JSON.stringify({model:"qwen3:8b", messages:updated, stream:false})
       });
       const data = await res.json();
       clearTimeout(timeoutId);
       const reply = data.choices?.[0]?.message?.content || "Désolée, une erreur s'est produite.";
-      setConversations(p => p.map(c => c.id === activeId ? {...c, messages:[...updated,{role:"assistant",content:reply}]} : c));
+      setConversations(p => p.map(c => c.id === activeIdRef.current ? {...c, messages:[...updated,{role:"assistant",content:reply}]} : c));
     } catch {
-      setConversations(p => p.map(c => c.id === activeId ? {...c, messages:[...updated,{role:"assistant",content:"Erreur de connexion. Vérifiez le tunnel."}]} : c));
+      setConversations(p => p.map(c => c.id === activeIdRef.current ? {...c, messages:[...updated,{role:"assistant",content:"Erreur de connexion."}]} : c));
     }
     setLoading(false);
   };
-
+  const send = () => { if (input.trim() && !loading) sendMsg(input); };
   const onKey = (e) => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} };
   const onInput = (e) => {
     setInput(e.target.value);
     e.target.style.height='auto';
     e.target.style.height=Math.min(e.target.scrollHeight,130)+'px';
   };
-
+  const toggleVoice = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("Micro non supporté sur ce navigateur"); return; }
+    if (listening) {
+      recRef.current && recRef.current.stop();
+      setListening(false);
+      return;
+    }
+    const r = new SR();
+    r.lang = "fr-FR";
+    r.continuous = false;
+    r.interimResults = false;
+    r.onstart = () => setListening(true);
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    r.onresult = (e) => {
+      let t = "";
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) t += e.results[i][0].transcript;
+      }
+      if (t.trim()) sendMsg(t.trim());
+    };
+    recRef.current = r;
+    r.start();
+  };
   const canSend = input.trim().length > 0 && !loading;
-
   return (
     <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text,position:'relative',overflow:'hidden'}}>
       {sidebar && <div onClick={()=>setSidebar(false)} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.6)',zIndex:99,backdropFilter:'blur(3px)'}}/>}
@@ -163,7 +178,7 @@ export default function App() {
               <div style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,background:`linear-gradient(135deg,${C.cyan},${C.purple})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',textAlign:'center'}}>Bonjour, je suis Nova</div>
               <div style={{fontSize:14,color:C.muted,textAlign:'center',lineHeight:1.6}}>Votre assistante IA personnelle.<br/>Comment puis-je vous aider ?</div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginTop:12,maxWidth:340}}>
-                {SUGGESTIONS.map(s=>(<button key={s} className="sugg" onClick={()=>send(s)} style={{padding:'7px 13px',background:'rgba(99,179,237,0.06)',border:'1px solid rgba(99,179,237,0.15)',borderRadius:20,color:C.muted,fontSize:12,transition:'all .15s',fontWeight:500}}>{s}</button>))}
+                {SUGGESTIONS.map(s=>(<button key={s} className="sugg" onClick={()=>sendMsg(s)} style={{padding:'7px 13px',background:'rgba(99,179,237,0.06)',border:'1px solid rgba(99,179,237,0.15)',borderRadius:20,color:C.muted,fontSize:12,transition:'all .15s',fontWeight:500}}>{s}</button>))}
               </div>
             </div>
           ) : msgs.map((m,i)=>(
@@ -193,7 +208,10 @@ export default function App() {
         <div style={{padding:'12px 18px 28px',borderTop:`1px solid ${C.border}`,background:'rgba(7,9,15,0.92)',backdropFilter:'blur(24px)'}}>
           <div style={{display:'flex',alignItems:'flex-end',gap:10,background:C.card,border:`1px solid ${focused?C.borderActive:C.border}`,borderRadius:16,padding:'10px 12px',transition:'border-color .2s'}}>
             <textarea ref={taRef} value={input} onChange={onInput} onKeyDown={onKey} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} placeholder="Message à Nova…" rows={1} style={{flex:1,background:'transparent',border:'none',color:C.text,fontSize:14,lineHeight:1.55,maxHeight:130,padding:'2px 0'}}/>
-            <button onClick={()=>send()} disabled={!canSend} style={{width:36,height:36,borderRadius:10,border:'none',flexShrink:0,background:canSend?`linear-gradient(135deg,${C.cyan},${C.purple})`:'rgba(99,179,237,0.08)',display:'flex',alignItems:'center',justifyContent:'center',opacity:canSend?1:0.45}}>
+            <button onClick={toggleVoice} className={listening?"mic-pulse":""} style={{width:36,height:36,borderRadius:10,border:'none',flexShrink:0,background:listening?'rgba(255,68,68,0.15)':'rgba(99,179,237,0.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:listening?'#ff4444':C.cyan}}>
+              {listening ? '🔴' : '🎤'}
+            </button>
+            <button onClick={send} disabled={!canSend} style={{width:36,height:36,borderRadius:10,border:'none',flexShrink:0,background:canSend?`linear-gradient(135deg,${C.cyan},${C.purple})`:'rgba(99,179,237,0.08)',display:'flex',alignItems:'center',justifyContent:'center',opacity:canSend?1:0.45}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M22 2L11 13" stroke={canSend?'#07090F':C.cyan} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke={canSend?'#07090F':C.cyan} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
