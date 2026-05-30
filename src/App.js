@@ -72,7 +72,12 @@ const VoiceOrb = ({ listening, speaking, onClick }) => {
 
 let nextId = 2;
 export default function App() {
-  const [conversations, setConversations] = useState([{id:1,title:"Nouvelle conversation",messages:[]}]);
+  const [conversations, setConversations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nova_conversations');
+      return saved ? JSON.parse(saved) : [{id:1,title:"Nouvelle conversation",messages:[]}];
+    } catch { return [{id:1,title:"Nouvelle conversation",messages:[]}]; }
+  });
   const [activeId, setActiveId] = useState(1);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -123,6 +128,10 @@ export default function App() {
     link.href='https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap';
     document.head.appendChild(link);
   }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem('nova_conversations', JSON.stringify(conversations)); } catch {}
+  }, [conversations]);
 
   const active = conversations.find(c => c.id === activeId);
   const msgs = active?.messages || [];
