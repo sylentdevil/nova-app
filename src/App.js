@@ -114,21 +114,27 @@ export default function App() {
     e.target.style.height='auto';
     e.target.style.height=Math.min(e.target.scrollHeight,130)+'px';
   };
-  const toggleVoice = () => {
+  const liveRef = useRef(false);
+
+  const startListening = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert("Micro non supporté sur ce navigateur"); return; }
-    if (listening) {
-      recRef.current && recRef.current.stop();
-      setListening(false);
-      return;
-    }
+    if (!SR || !liveRef.current) return;
     const r = new SR();
     r.lang = "fr-FR";
     r.continuous = false;
     r.interimResults = false;
     r.onstart = () => setListening(true);
-    r.onend = () => setListening(false);
-    r.onerror = () => setListening(false);
+    r.onend = () => {
+      setListening(false);
+      // Redémarre automatiquement si mode live actif et pas en train de charger
+      if (liveRef.current && !loadingRef.current) {
+        setTimeout(() => startListening(), 800);
+      }
+    };
+    r.onerror = () => {
+      setListening(false);
+      if (liveRef.current) setTimeout(() => startListening(), 1500);
+    };
     r.onresult = (e) => {
       let t = "";
       for (let i = 0; i < e.results.length; i++) {
@@ -137,8 +143,28 @@ export default function App() {
       if (t.trim()) sendMsg(t.trim());
     };
     recRef.current = r;
-    r.start();
+    try { r.start(); } catch(e) {}
   };
+
+  const toggleVoice = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("Micro non supporté sur ce navigateur"); return; }
+    if (liveRef.current) {
+      liveRef.current = false;
+      recRef.current && recRef.current.stop();
+      setListening(false);
+      return;
+    }
+    liveRef.current = true;
+    startListening();
+  };
+
+  // Redémarre l'écoute après chaque réponse en mode live
+  useEffect(() => {
+    if (!loading && liveRef.current && !listening) {
+      setTimeout(() => startListening(), 600);
+    }
+  }, [loading]);
   const canSend = input.trim().length > 0 && !loading;
   return (
     <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text,position:'relative',overflow:'hidden'}}>
