@@ -119,7 +119,7 @@ export default function App() {
   const speakRef = useRef(true); // TTS activé par défaut
   const [tts, setTts] = useState(true);
 
-  const ELEVEN_KEY = "77f13cc7ef51cb08db0c34fa37ef352dfd26f25c9cc4067faa9175420203aeb7";
+  const ELEVEN_KEY = "sk_92619ee822509e4cf39f9070428eb5b71fff4c6729b8fcae";
   const ELEVEN_VOICE = "m5U7XCsc8v988k2RJAqN";
 
   const speak = async (text) => {
