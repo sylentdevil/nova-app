@@ -101,6 +101,7 @@ export default function App() {
       const data = await res.json();
       clearTimeout(timeoutId);
       const reply = data.choices?.[0]?.message?.content || "Désolée, une erreur s'est produite.";
+      speak(reply);
       setConversations(p => p.map(c => c.id === activeIdRef.current ? {...c, messages:[...updated,{role:"assistant",content:reply}]} : c));
     } catch {
       setConversations(p => p.map(c => c.id === activeIdRef.current ? {...c, messages:[...updated,{role:"assistant",content:"Erreur de connexion."}]} : c));
@@ -115,6 +116,27 @@ export default function App() {
     e.target.style.height=Math.min(e.target.scrollHeight,130)+'px';
   };
   const liveRef = useRef(false);
+  const speakRef = useRef(true); // TTS activé par défaut
+  const [tts, setTts] = useState(true);
+
+  const speak = (text) => {
+    if (!speakRef.current) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR";
+    u.rate = 1.05;
+    u.pitch = 1.1;
+    // Choisir une voix française si disponible
+    const voices = window.speechSynthesis.getVoices();
+    const frVoice = voices.find(v => v.lang.startsWith("fr") && v.name.toLowerCase().includes("female"))
+      || voices.find(v => v.lang.startsWith("fr"));
+    if (frVoice) u.voice = frVoice;
+    u.onend = () => {
+      // Redémarre l'écoute après que Nova a fini de parler
+      if (liveRef.current) setTimeout(() => startListening(), 300);
+    };
+    window.speechSynthesis.speak(u);
+  };
 
   const startListening = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -234,6 +256,9 @@ export default function App() {
         <div style={{padding:'12px 18px 28px',borderTop:`1px solid ${C.border}`,background:'rgba(7,9,15,0.92)',backdropFilter:'blur(24px)'}}>
           <div style={{display:'flex',alignItems:'flex-end',gap:10,background:C.card,border:`1px solid ${focused?C.borderActive:C.border}`,borderRadius:16,padding:'10px 12px',transition:'border-color .2s'}}>
             <textarea ref={taRef} value={input} onChange={onInput} onKeyDown={onKey} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} placeholder="Message à Nova…" rows={1} style={{flex:1,background:'transparent',border:'none',color:C.text,fontSize:14,lineHeight:1.55,maxHeight:130,padding:'2px 0'}}/>
+            <button onClick={()=>{speakRef.current=!speakRef.current;setTts(t=>!t);}} style={{width:36,height:36,borderRadius:10,border:'none',flexShrink:0,background:tts?'rgba(167,139,250,0.15)':'rgba(99,179,237,0.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:tts?C.purple:C.muted}} title="Activer/désactiver la voix">
+              {tts ? '🔊' : '🔇'}
+            </button>
             <button onClick={toggleVoice} className={listening?"mic-pulse":""} style={{width:36,height:36,borderRadius:10,border:'none',flexShrink:0,background:listening?'rgba(255,68,68,0.15)':'rgba(99,179,237,0.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:listening?'#ff4444':C.cyan}}>
               {listening ? '🔴' : '🎤'}
             </button>
