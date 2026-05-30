@@ -119,41 +119,32 @@ export default function App() {
   const speakRef = useRef(true); // TTS activé par défaut
   const [tts, setTts] = useState(true);
 
-  const ELEVEN_KEY = "sk_92619ee822509e4cf39f9070428eb5b71fff4c6729b8fcae";
-  const ELEVEN_VOICE = "m5U7XCsc8v988k2RJAqN";
-
-  const speak = async (text) => {
+    const speak = (text) => {
     if (!speakRef.current) return;
-    try {
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE}`, {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVEN_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          text: text.slice(0, 500),
-          model_id: "eleven_multilingual_v2",
-          voice_settings: { stability: 0.5, similarity_boost: 1.0 }
-        })
-      });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        if (liveRef.current) setTimeout(() => startListening(), 300);
-      };
-      audio.play();
-    } catch(e) {
+    window.speechSynthesis.cancel();
+    const trySpeak = () => {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "fr-FR";
+      u.rate = 0.92;
+      u.pitch = 1.2;
+      u.volume = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const frVoice =
+        voices.find(v => v.lang === "fr-FR" && v.name.includes("Google") && !v.name.toLowerCase().includes("male")) ||
+        voices.find(v => v.lang === "fr-FR" && v.name.includes("Google")) ||
+        voices.find(v => v.lang === "fr-FR" && !v.name.toLowerCase().includes("male")) ||
+        voices.find(v => v.lang === "fr-FR") ||
+        voices.find(v => v.lang.startsWith("fr"));
+      if (frVoice) u.voice = frVoice;
       u.onend = () => { if (liveRef.current) setTimeout(() => startListening(), 300); };
       window.speechSynthesis.speak(u);
-    }
+    };
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = trySpeak;
+    } else { trySpeak(); }
   };
 
-  const startListening = () => {
+    const startListening = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR || !liveRef.current) return;
     const r = new SR();
