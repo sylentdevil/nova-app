@@ -284,6 +284,17 @@ export default function App() {
           ))}
         </div>
         <div style={{padding:'12px 16px',borderTop:`1px solid ${C.border}`}}>
+          <div style={{padding:'12px 16px',borderTop:`1px solid ${C.border}`,display:'flex',flexDirection:'column',gap:8}}>
+          <button onClick={()=>{
+            if(window.confirm('Effacer tout l\'historique ?')){
+              const id=nextId++;
+              setConversations([{id,title:"Nouvelle conversation",messages:[]}]);
+              setActiveId(id);
+              setSidebar(false);
+            }
+          }} style={{width:'100%',padding:'8px 12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:10,color:'#F87171',fontSize:12,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+            🗑️ Effacer tout l'historique
+          </button>
           <div style={{fontSize:11,color:C.muted,textAlign:'center'}}>Nova · Maison connectée</div>
         </div>
       </div>
