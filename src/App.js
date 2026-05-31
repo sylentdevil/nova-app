@@ -283,8 +283,7 @@ export default function App() {
             </div>
           ))}
         </div>
-        <div style={{padding:'12px 16px',borderTop:`1px solid ${C.border}`}}>
-          <div style={{padding:'12px 16px',borderTop:`1px solid ${C.border}`,display:'flex',flexDirection:'column',gap:8}}>
+        <div style={{padding:'12px 16px',borderTop:`1px solid ${C.border}`,display:'flex',flexDirection:'column',gap:8}}>
           <button onClick={()=>{
             if(window.confirm('Effacer tout l\'historique ?')){
               const id=nextId++;
