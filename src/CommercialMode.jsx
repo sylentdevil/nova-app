@@ -8,7 +8,7 @@ const TUNNEL = "https://mls-collecting-bills-bears.trycloudflare.com";
 function deduplicateStart(text) {
   const words = text.trim().split(/\s+/);
   const n = words.length;
-  for (let len = Math.min(3, Math.floor(n / 2)); len >= 1; len--) {
+  for (let len = Math.min(8, Math.floor(n / 2)); len >= 1; len--) {
     const a = words.slice(0, len).map(w => w.toLowerCase());
     const b = words.slice(len, len * 2).map(w => w.toLowerCase());
     if (a.join(" ") === b.join(" ")) {
