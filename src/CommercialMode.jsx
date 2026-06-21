@@ -39,7 +39,8 @@ export default function CommercialMode({ onBack }) {
   const recRef      = useRef(null);
   const debounceRef = useRef(null);
   const activeRef   = useRef(false);
-  const interimRef  = useRef("");
+  const interimRef  = useRef("");   // interim courant (affichage seulement)
+  const accumulatedRef = useRef(""); // finaux accumulés depuis le dernier envoi
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -104,22 +105,26 @@ export default function CommercialMode({ onBack }) {
       }
 
       if (final) {
-        const full = (interimRef.current + " " + final).trim();
+        // Accumule tous les segments finaux — ne remplace pas
+        accumulatedRef.current = (accumulatedRef.current + " " + final).trim();
         interimRef.current = "";
-        setTranscript(full);
-        setPendingText(full);
+        setTranscript(accumulatedRef.current);
+        setPendingText(accumulatedRef.current);
 
-        // Debounce 1.2s : envoie si pas de nouveau fragment dans 1.2s
+        // Repart le debounce à chaque nouveau final ; envoie après 1.2s de silence
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-          sendToRouter(full);
+          const toSend = accumulatedRef.current;
+          accumulatedRef.current = "";
           interimRef.current = "";
           setTranscript("");
           setPendingText("");
+          sendToRouter(toSend);
         }, 1200);
       } else if (interim) {
         interimRef.current = interim;
-        setTranscript(interim);
+        // Affiche les finaux accumulés + l'interim en cours
+        setTranscript((accumulatedRef.current + " " + interim).trim());
       }
     };
 
@@ -130,6 +135,7 @@ export default function CommercialMode({ onBack }) {
   const handleStart = () => {
     activeRef.current = true;
     interimRef.current = "";
+    accumulatedRef.current = "";
     setTranscript("");
     setPendingText("");
     setResult(null);
@@ -143,6 +149,7 @@ export default function CommercialMode({ onBack }) {
     setListening(false);
     setTranscript("");
     interimRef.current = "";
+    accumulatedRef.current = "";
   };
 
   const handleClear = () => {
