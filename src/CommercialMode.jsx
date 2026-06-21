@@ -2,17 +2,23 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 const TUNNEL = "https://mls-collecting-bills-bears.trycloudflare.com";
 
-// Supprime les séquences de 1-3 mots répétées consécutivement en début de texte.
+// Supprime les séquences de mots consécutivement répétées n'importe où dans le texte.
 // Ex: "un un peu un peu trop cher" → "un peu trop cher"
+//     "X Y je trouve ça je trouve ça un" → "X Y je trouve ça un"
 // Artefact Web Speech API Android : chevauchement audio au redémarrage après onend.
-function deduplicateStart(text) {
+function deduplicateRepeats(text) {
   const words = text.trim().split(/\s+/);
   const n = words.length;
+  // Fenêtres les plus longues d'abord (greedy), balayage gauche→droite
   for (let len = Math.min(8, Math.floor(n / 2)); len >= 1; len--) {
-    const a = words.slice(0, len).map(w => w.toLowerCase());
-    const b = words.slice(len, len * 2).map(w => w.toLowerCase());
-    if (a.join(" ") === b.join(" ")) {
-      return deduplicateStart(words.slice(len).join(" "));
+    for (let i = 0; i + len * 2 <= n; i++) {
+      const a = words.slice(i, i + len).map(w => w.toLowerCase());
+      const b = words.slice(i + len, i + len * 2).map(w => w.toLowerCase());
+      if (a.join(" ") === b.join(" ")) {
+        // Supprime la deuxième occurrence, conserve la première
+        const deduped = [...words.slice(0, i + len), ...words.slice(i + len * 2)].join(" ");
+        return deduplicateRepeats(deduped);
+      }
     }
   }
   return text;
@@ -130,7 +136,7 @@ export default function CommercialMode({ onBack }) {
         // Repart le debounce à chaque nouveau final ; envoie après 1.2s de silence
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-          const toSend = deduplicateStart(accumulatedRef.current);
+          const toSend = deduplicateRepeats(accumulatedRef.current);
           accumulatedRef.current = "";
           interimRef.current = "";
           setTranscript("");
