@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import CommercialMode from "./CommercialMode";
 const TUNNEL = "https://mls-collecting-bills-bears.trycloudflare.com";
 const C = {
   bg:'#07090F',surface:'#0C1018',card:'#111827',
@@ -88,6 +89,7 @@ export default function App() {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [commercialMode, setCommercialMode] = useState(false);
   const [tts, setTts] = useState(true);
   const endRef = useRef(null);
   const taRef = useRef(null);
@@ -262,6 +264,14 @@ export default function App() {
   };
   const canSend = input.trim().length > 0 && !loading;
 
+  if (commercialMode) {
+    return (
+      <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text,position:'relative',overflow:'hidden'}}>
+        <CommercialMode onBack={() => setCommercialMode(false)} />
+      </div>
+    );
+  }
+
   return (
     <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text,position:'relative',overflow:'hidden'}}>
       {sidebar && <div onClick={()=>setSidebar(false)} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.6)',zIndex:99,backdropFilter:'blur(3px)'}}/>}
@@ -306,6 +316,7 @@ export default function App() {
           <NovaLogo size={26}/>
           <span style={{fontFamily:"'Syne',sans-serif",fontSize:18,fontWeight:700,flex:1}}>Nova</span>
           <button onClick={()=>{setTts(t=>!t);}} style={{background:'none',border:'none',fontSize:16,color:tts?C.purple:C.muted,cursor:'pointer'}} title="Voix on/off">{tts?'🔊':'🔇'}</button>
+          <button onClick={()=>setCommercialMode(true)} style={{padding:'5px 11px',background:'rgba(52,211,153,0.1)',border:'1px solid rgba(52,211,153,0.25)',borderRadius:20,color:'#34D399',fontSize:12,fontWeight:600,letterSpacing:'0.03em'}}>💼 Commercial</button>
           <span style={{fontSize:10,padding:'3px 9px',fontWeight:600,background:'rgba(99,179,237,0.1)',border:'1px solid rgba(99,179,237,0.2)',borderRadius:20,color:C.cyan,letterSpacing:'0.04em'}}>IA LOCALE</span>
         </div>
 
