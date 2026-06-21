@@ -2,6 +2,22 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 const TUNNEL = "https://mls-collecting-bills-bears.trycloudflare.com";
 
+// Supprime les séquences de 1-3 mots répétées consécutivement en début de texte.
+// Ex: "un un peu un peu trop cher" → "un peu trop cher"
+// Artefact Web Speech API Android : chevauchement audio au redémarrage après onend.
+function deduplicateStart(text) {
+  const words = text.trim().split(/\s+/);
+  const n = words.length;
+  for (let len = Math.min(3, Math.floor(n / 2)); len >= 1; len--) {
+    const a = words.slice(0, len).map(w => w.toLowerCase());
+    const b = words.slice(len, len * 2).map(w => w.toLowerCase());
+    if (a.join(" ") === b.join(" ")) {
+      return deduplicateStart(words.slice(len).join(" "));
+    }
+  }
+  return text;
+}
+
 const C = {
   bg:'#07090F', surface:'#0C1018', card:'#111827',
   border:'rgba(99,179,237,0.1)', borderActive:'rgba(99,179,237,0.28)',
@@ -114,7 +130,7 @@ export default function CommercialMode({ onBack }) {
         // Repart le debounce à chaque nouveau final ; envoie après 1.2s de silence
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-          const toSend = accumulatedRef.current;
+          const toSend = deduplicateStart(accumulatedRef.current);
           accumulatedRef.current = "";
           interimRef.current = "";
           setTranscript("");
